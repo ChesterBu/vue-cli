@@ -51,11 +51,15 @@ module.exports = class Creator extends EventEmitter {
     super()
 
     this.name = name
+    // targetDir 生成项目的地址
     this.context = process.env.VUE_CLI_CONTEXT = context
+    // 获取了 presetPrompt list，在初始化项目的时候提供选择
     const { presetPrompt, featurePrompt } = this.resolveIntroPrompts()
-    this.presetPrompt = presetPrompt
-    this.featurePrompt = featurePrompt
+    this.presetPrompt = presetPrompt  // presetPrompt list
+    this.featurePrompt = featurePrompt // babal, pwa, e2e etc.
+    // 存放项目配置的文件（package.json || congfig.js） 以及是否将 presetPrompts 存放起来
     this.outroPrompts = this.resolveOutroPrompts()
+    // 对应 feature 的 Prompts
     this.injectedPrompts = []
     this.promptCompleteCbs = []
     this.afterInvokeCbs = []
@@ -129,6 +133,12 @@ module.exports = class Creator extends EventEmitter {
     this.emit('creation', { event: 'creating' })
 
     // get latest CLI plugin version
+    // {
+    //   current: '4.2.3',
+    //   latest: '4.2.3',
+    //   latestMinor: '4.2.0',
+    //   error: undefined
+    // }
     const { latestMinor } = await getVersions()
 
     // generate package.json with plugin dependencies
@@ -276,7 +286,7 @@ module.exports = class Creator extends EventEmitter {
     if (!args) { [command, ...args] = command.split(/\s+/) }
     return execa(command, args, { cwd: this.context })
   }
-
+  // 交互的形式来获取 preset
   async promptAndResolvePreset (answers = null) {
     // prompt
     if (!answers) {
@@ -496,6 +506,13 @@ module.exports = class Creator extends EventEmitter {
         return isManualMode(answers) && originalWhen(answers)
       }
     })
+    // presetPrompt： 预设选项 prompt，当上次以 Manually 模式进行了预设选项，并且保存到了 ~/.vuerc 中，那么在初始化项目时就会列出已经保存的 preset，并提供选择。
+    // featurePrompt：项目的一些 feature，就是选择 babel，typescript，pwa，router，vuex，cssPreprocessors，linter，unit，e2e。
+    // injectedPrompts：当选择了 feature 后，就会为对应的 feature 注入 prompts，比如你选择了 unit，那么就会让你选择模式： Mocha + Chai 还是 Jest
+    // outroPrompts： 其他的 prompt，包含：
+    // 将 Babel, PostCSS, ESLint 等等的配置文件存放在 package.json 中还是存放在 config 文件中；
+    // 是否需要将这次设置的 preset 保存到本地，如果需要则会进一步让你输入名称进行保存；
+    // 安装依赖是选择 npm 还是 yarn。
     const prompts = [
       this.presetPrompt,
       this.featurePrompt,
